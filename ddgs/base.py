@@ -67,6 +67,8 @@ class BaseSearchEngine(ABC, Generic[T]):
         resp = self.http_client.request(*args, **kwargs)
         if resp.status_code == 200:
             return resp.text
+        url = args[1] if len(args) > 1 else kwargs.get("url", "?")
+        logger.warning("%s: HTTP %s for %s", self.name, resp.status_code, url)
         return None
 
     @cached_property
@@ -118,6 +120,12 @@ class BaseSearchEngine(ABC, Generic[T]):
         else:
             html_text = self.request(self.search_method, self.search_url, data=payload)
         if not html_text:
+            logger.warning("%s: no HTML returned (non-200 response)", self.name)
             return None
         results = self.extract_results(html_text)
-        return self.post_extract_results(results)
+        results = self.post_extract_results(results)
+        if not results:
+            logger.warning("%s: parsed 0 results", self.name)
+        else:
+            logger.info("%s: %d results", self.name, len(results))
+        return results
