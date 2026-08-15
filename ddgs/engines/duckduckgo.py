@@ -1,17 +1,19 @@
 """Duckduckgo search engine implementation."""
 
 from collections.abc import Mapping
-from typing import Any, ClassVar, TypeVar
-
-from fake_useragent import UserAgent
+from typing import Any, ClassVar
+from urllib.parse import parse_qs, unquote, urlparse
 
 from ddgs.base import BaseSearchEngine
-from ddgs.http_client2 import HttpClient2
 from ddgs.results import TextResult
 
-ua = UserAgent()
 
-T = TypeVar("T")
+def _extract_uddg(href: str) -> str:
+    """Decode the DuckDuckGo lite redirect wrapper to the real target URL."""
+    parsed = urlparse(href if "://" in href else f"https:{href}")
+    if "duckduckgo" in parsed.netloc and (uddg := parse_qs(parsed.query).get("uddg")):
+        return unquote(uddg[0])
+    return href
 
 
 class Duckduckgo(BaseSearchEngine[TextResult]):
@@ -19,38 +21,34 @@ class Duckduckgo(BaseSearchEngine[TextResult]):
 
     name = "duckduckgo"
     category = "text"
-    provider = "bing"
+    provider = "duckduckgo"
 
-    search_url = "https://html.duckduckgo.com/html/"
-    search_method = "POST"
+    search_url = "https://lite.duckduckgo.com/lite/"
+    search_method = "GET"
 
-    items_xpath = "//div[contains(@class, 'body')]"
-    elements_xpath: ClassVar[Mapping[str, str]] = {"title": ".//h2//text()", "href": "./a/@href", "body": "./a//text()"}
-
-    headers: ClassVar[dict[str, str]] = {"User-Agent": ua.random}
-
-    def __init__(self, proxy: str | None = None, timeout: int | None = None, *, verify: bool = True) -> None:
-        """Temporary, delete when HttpClient is fixed."""
-        self.http_client = HttpClient2(headers=self.headers, proxy=proxy, timeout=timeout, verify=verify)  # type: ignore[assignment]
-        self.results: list[T] = []  # type: ignore[valid-type]
+    items_xpath = "//a[@class='result-link']"
+    elements_xpath: ClassVar[Mapping[str, str]] = {"title": "./text()", "href": "./@href"}
 
     def build_payload(
         self,
         query: str,
-        region: str,
+        region: str,  # noqa: ARG002
         safesearch: str,  # noqa: ARG002
-        timelimit: str | None,
+        timelimit: str | None,  # noqa: ARG002
         page: int = 1,
         **kwargs: str,  # noqa: ARG002
     ) -> dict[str, Any]:
         """Build a payload for the search request."""
-        payload = {"q": query, "b": "", "l": region}
+        payload: dict[str, Any] = {"q": query}
         if page > 1:
-            payload["s"] = f"{10 + (page - 2) * 15}"
-        if timelimit:
-            payload["df"] = timelimit
+            payload["s"] = str((page - 1) * 20)
         return payload
 
     def post_extract_results(self, results: list[TextResult]) -> list[TextResult]:
         """Post-process search results."""
-        return [r for r in results if not r.href.startswith("https://duckduckgo.com/y.js?")]
+        post_results = []
+        for result in results:
+            result.href = _extract_uddg(result.href)
+            if result.href.startswith("http"):
+                post_results.append(result)
+        return post_results
