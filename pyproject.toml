@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ddgs"
+version = "9.14.4"
 description = "Dux Distributed Global Search. A metasearch library that aggregates results from diverse web search services."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,7 +34,6 @@ dependencies = [
     "httpx[http2,socks,brotli]>=0.28.1",  # temporarily
     "fake-useragent>=2.2.0",
 ]
-dynamic = ["version"]
 
 [project.urls]
 "Homepage" = "https://github.com/deedy5/ddgs"
@@ -43,9 +43,6 @@ dynamic = ["version"]
 
 [project.scripts]
 ddgs = "ddgs.cli:safe_entry_point"
-
-[tool.setuptools.dynamic]
-version = {attr = "ddgs.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["ddgs*"]
