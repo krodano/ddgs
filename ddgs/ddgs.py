@@ -11,7 +11,7 @@ from typing import Any, ClassVar
 from .base import BaseSearchEngine
 from .engines import ENGINES
 from .exceptions import DDGSException, TimeoutException
-from .http_client import HttpClient
+from .http_client import DEFAULT_PRESET, HttpClient
 from .results import ResultsAggregator
 from .similarity import SimpleFilterRanker
 from .utils import _expand_proxy_tb_alias
@@ -28,6 +28,7 @@ class DDGS:
         proxy: The proxy to use for the search. Defaults to None.
         timeout: The timeout for the search. Defaults to 5.
         verify: bool (True to verify, False to skip) or str path to a PEM file. Defaults to True.
+        preset: Browser fingerprint preset for httpcloak. Defaults to "chrome-latest".
 
     Attributes:
         threads: The maximum number of threads per search. Defaults to None (automatic, based on max_results).
@@ -49,10 +50,12 @@ class DDGS:
         timeout: int | None = 5,
         *,
         verify: bool | str = True,
+        preset: str = DEFAULT_PRESET,
     ) -> None:
         self._proxy = _expand_proxy_tb_alias(proxy) or os.environ.get("DDGS_PROXY")
         self._timeout = timeout
         self._verify = verify
+        self._preset = preset
         self._engines_cache: dict[
             type[BaseSearchEngine[Any]], BaseSearchEngine[Any]
         ] = {}  # dict[engine_class, engine_instance]
@@ -120,7 +123,9 @@ class DDGS:
                 instances.append(self._engines_cache[engine_class])
             # If not cached, create a new instance
             else:
-                engine_instance = engine_class(proxy=self._proxy, timeout=self._timeout, verify=self._verify)
+                engine_instance = engine_class(
+                    proxy=self._proxy, timeout=self._timeout, verify=self._verify, preset=self._preset
+                )
                 self._engines_cache[engine_class] = engine_instance
                 instances.append(engine_instance)
 
@@ -257,7 +262,7 @@ class DDGS:
             A dictionary with 'url' and 'content' keys.
 
         """
-        client = HttpClient(proxy=self._proxy, timeout=self._timeout, verify=self._verify)
+        client = HttpClient(proxy=self._proxy, timeout=self._timeout, verify=self._verify, preset=self._preset)
         resp = client.get(url)
         if resp.status_code != 200:
             msg = f"Failed to fetch {url}: HTTP {resp.status_code}"

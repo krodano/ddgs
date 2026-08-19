@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Generic, Literal, TypeVar
 from lxml import html
 from lxml.etree import HTMLParser as LHTMLParser
 
-from .http_client import HttpClient
+from .http_client import DEFAULT_PRESET, HttpClient
 from .results import BooksResult, ImagesResult, NewsResult, TextResult, VideosResult
 
 logger = logging.getLogger(__name__)
@@ -32,8 +32,15 @@ class BaseSearchEngine(ABC, Generic[T]):
     elements_xpath: ClassVar[Mapping[str, str]]
     elements_replace: ClassVar[Mapping[str, str]]
 
-    def __init__(self, proxy: str | None = None, timeout: int | None = None, *, verify: bool | str = True) -> None:
-        self.http_client = HttpClient(proxy=proxy, timeout=timeout, verify=verify)
+    def __init__(
+        self,
+        proxy: str | None = None,
+        timeout: int | None = None,
+        *,
+        verify: bool | str = True,
+        preset: str = DEFAULT_PRESET,
+    ) -> None:
+        self.http_client = HttpClient(proxy=proxy, timeout=timeout, verify=verify, preset=preset)
         self.http_client.headers_update(self.headers_update)
         self.results: list[T] = []
 

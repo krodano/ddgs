@@ -50,7 +50,14 @@ class Response:
 class HttpClient:
     """HTTP client."""
 
-    def __init__(self, proxy: str | None = None, timeout: int | None = 10, *, verify: bool | str = True) -> None:
+    def __init__(
+        self,
+        proxy: str | None = None,
+        timeout: int | None = 10,
+        *,
+        verify: bool | str = True,
+        preset: str = DEFAULT_PRESET,
+    ) -> None:
         """Initialize the HttpClient object.
 
         Args:
@@ -58,13 +65,14 @@ class HttpClient:
                 example: "http://user:pass@example.com:3128". Defaults to None.
             timeout (int, optional): Timeout value for the HTTP client. Defaults to 10.
             verify: (bool | str):  True to verify, False to skip. Defaults to True.
+            preset: (str): Browser fingerprint preset for httpcloak. Defaults to "chrome-latest".
 
         """
         if isinstance(verify, str):
             logger.warning("Custom CA paths are not supported by httpcloak; falling back to verify=True")
             verify = True
         self.client = Session(
-            preset=DEFAULT_PRESET,
+            preset=preset,
             proxy=proxy,
             timeout=timeout,
             verify=verify,
