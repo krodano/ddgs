@@ -9,7 +9,13 @@ from typing import Any, ClassVar, Generic, Literal, TypeVar
 from lxml import html
 from lxml.etree import HTMLParser as LHTMLParser
 
-from .http_client import DEFAULT_PRESET, HttpClient
+from .http_client import (
+    DEFAULT_PRESET,
+    DEFAULT_RETRY,
+    DEFAULT_RETRY_WAIT_MAX,
+    DEFAULT_RETRY_WAIT_MIN,
+    HttpClient,
+)
 from .results import BooksResult, ImagesResult, NewsResult, TextResult, VideosResult
 
 logger = logging.getLogger(__name__)
@@ -39,8 +45,21 @@ class BaseSearchEngine(ABC, Generic[T]):
         *,
         verify: bool | str = True,
         preset: str = DEFAULT_PRESET,
+        retry: int = DEFAULT_RETRY,
+        retry_on_status: list[int] | None = None,
+        retry_wait_min: int = DEFAULT_RETRY_WAIT_MIN,
+        retry_wait_max: int = DEFAULT_RETRY_WAIT_MAX,
     ) -> None:
-        self.http_client = HttpClient(proxy=proxy, timeout=timeout, verify=verify, preset=preset)
+        self.http_client = HttpClient(
+            proxy=proxy,
+            timeout=timeout,
+            verify=verify,
+            preset=preset,
+            retry=retry,
+            retry_on_status=retry_on_status,
+            retry_wait_min=retry_wait_min,
+            retry_wait_max=retry_wait_max,
+        )
         self.http_client.headers_update(self.headers_update)
         self.results: list[T] = []
 

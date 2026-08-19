@@ -11,7 +11,13 @@ from typing import Any, ClassVar
 from .base import BaseSearchEngine
 from .engines import ENGINES
 from .exceptions import DDGSException, TimeoutException
-from .http_client import DEFAULT_PRESET, HttpClient
+from .http_client import (
+    DEFAULT_PRESET,
+    DEFAULT_RETRY,
+    DEFAULT_RETRY_WAIT_MAX,
+    DEFAULT_RETRY_WAIT_MIN,
+    HttpClient,
+)
 from .results import ResultsAggregator
 from .similarity import SimpleFilterRanker
 from .utils import _expand_proxy_tb_alias
@@ -29,6 +35,10 @@ class DDGS:
         timeout: The timeout for the search. Defaults to 5.
         verify: bool (True to verify, False to skip) or str path to a PEM file. Defaults to True.
         preset: Browser fingerprint preset for httpcloak. Defaults to "chrome-latest".
+        retry: Number of retries on retryable failures. Defaults to 3.
+        retry_on_status: Status codes to retry on (default: 202, 429, 5xx).
+        retry_wait_min: Min wait between retries, in milliseconds. Defaults to 1000.
+        retry_wait_max: Max wait between retries, in milliseconds. Defaults to 10000.
 
     Attributes:
         threads: The maximum number of threads per search. Defaults to None (automatic, based on max_results).
@@ -51,11 +61,19 @@ class DDGS:
         *,
         verify: bool | str = True,
         preset: str = DEFAULT_PRESET,
+        retry: int = DEFAULT_RETRY,
+        retry_on_status: list[int] | None = None,
+        retry_wait_min: int = DEFAULT_RETRY_WAIT_MIN,
+        retry_wait_max: int = DEFAULT_RETRY_WAIT_MAX,
     ) -> None:
         self._proxy = _expand_proxy_tb_alias(proxy) or os.environ.get("DDGS_PROXY")
         self._timeout = timeout
         self._verify = verify
         self._preset = preset
+        self._retry = retry
+        self._retry_on_status = retry_on_status
+        self._retry_wait_min = retry_wait_min
+        self._retry_wait_max = retry_wait_max
         self._engines_cache: dict[
             type[BaseSearchEngine[Any]], BaseSearchEngine[Any]
         ] = {}  # dict[engine_class, engine_instance]
@@ -124,7 +142,14 @@ class DDGS:
             # If not cached, create a new instance
             else:
                 engine_instance = engine_class(
-                    proxy=self._proxy, timeout=self._timeout, verify=self._verify, preset=self._preset
+                    proxy=self._proxy,
+                    timeout=self._timeout,
+                    verify=self._verify,
+                    preset=self._preset,
+                    retry=self._retry,
+                    retry_on_status=self._retry_on_status,
+                    retry_wait_min=self._retry_wait_min,
+                    retry_wait_max=self._retry_wait_max,
                 )
                 self._engines_cache[engine_class] = engine_instance
                 instances.append(engine_instance)
@@ -262,7 +287,16 @@ class DDGS:
             A dictionary with 'url' and 'content' keys.
 
         """
-        client = HttpClient(proxy=self._proxy, timeout=self._timeout, verify=self._verify, preset=self._preset)
+        client = HttpClient(
+            proxy=self._proxy,
+            timeout=self._timeout,
+            verify=self._verify,
+            preset=self._preset,
+            retry=self._retry,
+            retry_on_status=self._retry_on_status,
+            retry_wait_min=self._retry_wait_min,
+            retry_wait_max=self._retry_wait_max,
+        )
         resp = client.get(url)
         if resp.status_code != 200:
             msg = f"Failed to fetch {url}: HTTP {resp.status_code}"

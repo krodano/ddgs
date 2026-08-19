@@ -15,6 +15,10 @@ from .exceptions import DDGSException, TimeoutException
 logger = logging.getLogger(__name__)
 
 DEFAULT_PRESET = "chrome-latest"
+DEFAULT_RETRY = 3
+DEFAULT_RETRY_STATUSES: tuple[int, ...] = (202, 429, 500, 502, 503, 504)
+DEFAULT_RETRY_WAIT_MIN = 1000
+DEFAULT_RETRY_WAIT_MAX = 10000
 
 
 class Response:
@@ -57,6 +61,10 @@ class HttpClient:
         *,
         verify: bool | str = True,
         preset: str = DEFAULT_PRESET,
+        retry: int = DEFAULT_RETRY,
+        retry_on_status: list[int] | None = None,
+        retry_wait_min: int = DEFAULT_RETRY_WAIT_MIN,
+        retry_wait_max: int = DEFAULT_RETRY_WAIT_MAX,
     ) -> None:
         """Initialize the HttpClient object.
 
@@ -66,16 +74,26 @@ class HttpClient:
             timeout (int, optional): Timeout value for the HTTP client. Defaults to 10.
             verify: (bool | str):  True to verify, False to skip. Defaults to True.
             preset: (str): Browser fingerprint preset for httpcloak. Defaults to "chrome-latest".
+            retry: (int): Number of retries on retryable failures. Defaults to 3.
+            retry_on_status: (list[int] | None): Status codes to retry. Defaults to [202, 429, 5xx].
+            retry_wait_min: (int): Min wait between retries, in milliseconds. Defaults to 1000.
+            retry_wait_max: (int): Max wait between retries, in milliseconds. Defaults to 10000.
 
         """
         if isinstance(verify, str):
             logger.warning("Custom CA paths are not supported by httpcloak; falling back to verify=True")
             verify = True
+        if retry_on_status is None:
+            retry_on_status = list(DEFAULT_RETRY_STATUSES)
         self.client = Session(
             preset=preset,
             proxy=proxy,
             timeout=timeout,
             verify=verify,
+            retry=retry,
+            retry_on_status=retry_on_status,
+            retry_wait_min=retry_wait_min,
+            retry_wait_max=retry_wait_max,
         )
         self._headers: dict[str, str] = {}
 
