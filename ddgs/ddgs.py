@@ -197,24 +197,21 @@ class DDGS:
                 )
                 futures[future] = engine
 
-            try:
-                for future in as_completed(futures, timeout=self._timeout):
-                    engine = futures[future]
-                    try:
-                        if r := future.result():
-                            results_aggregator.extend(r)
-                            logger.info("%s: %d results", engine.name, len(r))
-                        else:
-                            logger.warning("%s: no results", engine.name)
-                    except Exception as ex:  # noqa: BLE001
-                        err = ex
-                        logger.info("Error in engine %s: %r", engine.name, ex)
-                    if max_results and len(results_aggregator) >= max_results:
-                        for f in futures:
-                            f.cancel()
-                        break
-            except TimeoutError as ex:
-                err = ex
+            for future in as_completed(futures):
+                engine = futures[future]
+                try:
+                    if r := future.result():
+                        results_aggregator.extend(r)
+                        logger.info("%s: %d results", engine.name, len(r))
+                    else:
+                        logger.warning("%s: no results", engine.name)
+                except Exception as ex:  # noqa: BLE001
+                    err = ex
+                    logger.info("Error in engine %s: %r", engine.name, ex)
+                if max_results and len(results_aggregator) >= max_results:
+                    for f in futures:
+                        f.cancel()
+                    break
 
         results = results_aggregator.extract_dicts()
         # Rank results
@@ -224,7 +221,7 @@ class DDGS:
         if results:
             return results[:max_results] if max_results else results
 
-        if isinstance(err, TimeoutError) or "timed out" in f"{err}":
+        if "timed out" in f"{err}":
             raise TimeoutException(err)
         logger.warning("No results from engines: %s", [engine.name for engine in engines])
         raise DDGSException(err or "No results found.")

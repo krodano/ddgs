@@ -11,10 +11,10 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import click
-import primp
 
 from . import __version__
 from .ddgs import DDGS
+from .http_client import HttpClient
 from .utils import _expand_proxy_tb_alias
 
 # Use a consistent PID file location in user's home directory
@@ -113,9 +113,7 @@ def _sanitize_query(query: str) -> str:
 
 def _download_file(url: str, dir_path: str, filename: str, proxy: str | None, *, verify: bool) -> None:
     try:
-        resp = primp.Client(proxy=proxy, impersonate="random", impersonate_os="random", timeout=10, verify=verify).get(
-            url,
-        )
+        resp = HttpClient(proxy=proxy, timeout=10, verify=verify).get(url)
         if resp.status_code == 200:
             f = Path(dir_path) / filename[:200]
             with f.open("wb") as file:

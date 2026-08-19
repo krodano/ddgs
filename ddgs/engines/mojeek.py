@@ -39,7 +39,7 @@ class Mojeek(BaseSearchEngine[TextResult]):
             "arc": country,
             "lb": lang,
         }
-        self.http_client.client.set_cookies("https://www.mojeek.com", cookies)
+        self.http_client.set_cookies("https://www.mojeek.com", cookies)
         payload = {
             "q": query,
             # "tlen": f"{randint(68, 128)}",  # Title length limit (default=68, max=128)  # noqa: ERA001

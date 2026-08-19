@@ -58,7 +58,7 @@ class Google(BaseSearchEngine[TextResult]):
         **kwargs: str,  # noqa: ARG002
     ) -> dict[str, Any]:
         """Build a payload for the Google search request."""
-        self.http_client.client.set_cookies("google.com", {"CONSENT": "YES+"})
+        self.http_client.set_cookies("google.com", {"CONSENT": "YES+"})
         safesearch_base = {"on": "2", "moderate": "1", "off": "0"}
         start = (page - 1) * 10
         payload = {

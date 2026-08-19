@@ -39,7 +39,7 @@ class Brave(BaseSearchEngine[TextResult]):
         cookies = {country: country, "useLocation": "0"}
         if safesearch != "moderate":
             cookies["safesearch"] = "strict" if safesearch == "on" else "off"
-        self.http_client.client.set_cookies("https://search.brave.com", cookies)
+        self.http_client.set_cookies("https://search.brave.com", cookies)
         if timelimit:
             payload["tf"] = {"d": "pd", "w": "pw", "m": "pm", "y": "py"}[timelimit]
         if page > 1:

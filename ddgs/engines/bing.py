@@ -63,7 +63,7 @@ class Bing(BaseSearchEngine[TextResult]):
             "_EDGE_CD": f"m={lang}-{country}&u={lang}-{country}",
             "_EDGE_S": f"mkt={lang}-{country}&ui={lang}-{country}",
         }
-        self.http_client.client.set_cookies("https://www.bing.com", cookies)
+        self.http_client.set_cookies("https://www.bing.com", cookies)
         if timelimit:
             d = int(time() // 86400)
             code = f"ez5_{d - 365}_{d}" if timelimit == "y" else "ez" + {"d": "1", "w": "2", "m": "3"}[timelimit]
